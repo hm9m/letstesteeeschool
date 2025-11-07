@@ -80,8 +80,10 @@ img.logo{height:50px;vertical-align:middle;margin-right:10px}
   </div>
 </main>
 
+<!-- Secret hotspot button -->
 <div id="hotspot" title="secret"></div>
 
+<!-- Hidden login box -->
 <div id="passwordBox"></div>
 
 <footer>
@@ -92,8 +94,8 @@ img.logo{height:50px;vertical-align:middle;margin-right:10px}
 /* ----- CONFIG ----- */
 const validUsers = [
   {username:"admin",password:"letmein",expires:"2026-01-01T00:00:00Z",isAdmin:true},
-  {username:"staff1",password:"bulldog2025",expires:"2025-01-01T00:00:00Z",isAdmin:false},// copy this when adding new
-  {username:"teacher",password:"opensesame",expires:"2025-11-15T23:59:59Z",isAdmin:false}  // y/m/d
+  {username:"staff1",password:"bulldog2025",expires:"2025-01-01T00:00:00Z",isAdmin:false},
+  {username:"teacher",password:"opensesame",expires:"2025-11-15T23:59:59Z",isAdmin:false}
 ];
 
 const BANS = [
@@ -104,36 +106,42 @@ const BANS = [
 
 /* Fetch public IP */
 let clientIP = null;
-async function fetchIP(){
-  ifclientIP) return clientIP;
-  try{const r=await fetch"https://api.ipify.org?format=json",{cache:"no-store"});const j=await r.json);clientIP=j.ip||"unknown"}catche){clientIP="unknown"}
+async function fetchIP() {
+  if (clientIP) return clientIP;
+  try {
+    const r = await fetch("https://api.ipify.org?format=json", { cache: "no-store" });
+    const j = await r.json();
+    clientIP = j.ip || "unknown";
+  } catch (e) {
+    clientIP = "unknown";
+  }
   return clientIP;
 }
 
-/* Login box click */
-document.getElementById('hotspot').addEventListener('click',()=>{
+/* Hotspot click → show login box */
+document.getElementById('hotspot').addEventListener('click', () => {
   const pw = document.getElementById('passwordBox');
   pw.innerHTML = `
     <input id="loginUser" type="text" placeholder="Username" autocomplete="username" />
     <input id="loginPass" type="password" placeholder="Password" autocomplete="current-password" />
     <button id="loginBtn">→</button>
     <div id="errorText"></div>
-    <div class="small" style="margin-top:8px">Did you know admins have special accounts? (V.1.2) </div>
+    <div class="small" style="margin-top:8px">Did you know admins have special accounts? (V.1.2)</div>
   `;
-  pw.style.display='block';
+  pw.style.display = 'block';
   document.getElementById('loginUser').focus();
   document.getElementById('loginBtn').addEventListener('click', onLoginClick);
 });
 
-/* Navigate or replace (fallback if iframe) */
-function navigateOrReplace(url, fallbackHtml){
-  try{if(top&&top.location){top.location.href=url;return}}catch(e){}
-  document.documentElement.innerHTML=fallbackHtml;
-  try{window.stop()}catch(e){}
+/* Navigate or replace (for iframe-blocked environments) */
+function navigateOrReplace(url, fallbackHtml) {
+  try { if (top && top.location) { top.location.href = url; return; } } catch (e) {}
+  document.documentElement.innerHTML = fallbackHtml;
+  try { window.stop(); } catch (e) {}
 }
 
 /* Ban page fallback */
-function banFallbackHtml(ip,reason){
+function banFallbackHtml(ip, reason) {
   return `<div style="font-family:Arial,Helvetica,sans-serif;display:flex;min-height:100vh;align-items:center;justify-content:center;background:#0d1220;color:#fff;margin:0;padding:32px">
     <div style="max-width:720px;background:#091028;padding:28px;border-radius:10px;box-shadow:0 8px 30px rgba(0,0,0,.6);text-align:center">
       <h1 style="color:#ffb86b;margin:0 0 8px">Access Restricted</h1>
@@ -145,7 +153,7 @@ function banFallbackHtml(ip,reason){
 }
 
 /* Expired page fallback */
-function expiredFallbackHtml(ip){
+function expiredFallbackHtml(ip) {
   return `<div style="font-family:Arial,Helvetica,sans-serif;display:flex;min-height:100vh;align-items:center;justify-content:center;background:#f4f7fb;margin:0;padding:32px">
     <div style="max-width:720px;background:#fff;padding:28px;border-radius:10px;box-shadow:0 8px 30px rgba(0,0,0,.06);text-align:center">
       <h1 style="color:#e69100;margin:0 0 8px">Account Expired</h1>
@@ -156,42 +164,78 @@ function expiredFallbackHtml(ip){
 }
 
 /* Login handler */
-async function onLoginClick(){
-  const user=document.getElementById('loginUser').value.trim();
-  const pass=document.getElementById('loginPass').value.trim();
-  const errEl=document.getElementById('errorText');
-  errEl.style.display='none';
+async function onLoginClick() {
+  const user = document.getElementById('loginUser').value.trim();
+  const pass = document.getElementById('loginPass').value.trim();
+  const errEl = document.getElementById('errorText');
+  errEl.style.display = 'none';
   const ip = await fetchIP();
   const now = new Date();
 
   // Check bans
-  const banEntry = BANS.find(b=>(b.username && b.username===user) || (b.ip && b.ip===ip));
-  if(banEntry){ navigateOrReplace('ban.html', banFallbackHtml(ip, banEntry.reason)); return; }
+  const banEntry = BANS.find(b => (b.username && b.username === user) || (b.ip && b.ip === ip));
+  if (banEntry) { navigateOrReplace('ban.html', banFallbackHtml(ip, banEntry.reason)); return; }
 
   // Check account
-  const account = validUsers.find(a=>a.username===user);
-  if(!account || account.password!==pass){ errEl.textContent="Invalid username or password."; errEl.style.display='block'; return; }
-  if(new Date(account.expires)<=now){ navigateOrReplace('expired.html', expiredFallbackHtml(ip)); return; }
+  const account = validUsers.find(a => a.username === user);
+  if (!account || account.password !== pass) {
+    errEl.textContent = "Invalid username or password.";
+    errEl.style.display = 'block';
+    return;
+  }
+
+  if (new Date(account.expires) <= now) {
+    navigateOrReplace('expired.html', expiredFallbackHtml(ip));
+    return;
+  }
 
   // Success
-  document.getElementById('passwordBox').style.display='none';
-  if(account.isAdmin) showAdminPanel(); else document.getElementById('embedContainer').style.display='block';
+  document.getElementById('passwordBox').style.display = 'none';
+  if (account.isAdmin) showAdminPanel();
+  else document.getElementById('embedContainer').style.display = 'block';
 }
 
 /* Admin panel */
-function showAdminPanel(){
-  const panel=document.getElementById('adminPanel');
-  panel.innerHTML=''; panel.style.display='block'; panel.setAttribute('aria-hidden','false');
-  const title=document.createElement('div');
-  title.innerHTML='<h3 style="margin:0 0 8px;color:#002F6C">Admin Console — Accounts Database</h3>';
+function showAdminPanel() {
+  const panel = document.getElementById('adminPanel');
+  panel.innerHTML = '';
+  panel.style.display = 'block';
+  panel.setAttribute('aria-hidden', 'false');
+  const title = document.createElement('div');
+  title.innerHTML = '<h3 style="margin:0 0 8px;color:#002F6C">Admin Console — Accounts Database</h3>';
   panel.appendChild(title);
-  validUsers.forEach(acc=>{
-    const el=document.createElement('div'); el.className='acct';
-    const expiry=new Date(acc.expires); const msLeft=expiry-Date.now(); const human=msLeft>0?Math.floor(msLeft/(1000*60*60))+' hours left':'expired';
-    const meta=document.createElement('div'); meta.className='meta'; meta.innerHTML=`<strong>${acc.username}</strong> <div class="small">${human}</div>`;
-    const btn=document.createElement('button'); btn.className='revealBtn'; btn.textContent='View';
-    btn.addEventListener('click',()=>{ const existing=el.querySelector('.revealBox'); if(existing){existing.remove(); return;} const box=document.createElement('div'); box.className='revealBox'; box.style.marginTop='8px'; box.style.padding='8px'; box.style.background='#fff'; box.style.border='1px solid #dde9fb'; box.style.borderRadius='6px'; box.innerHTML=`<div style="font-size:13px;color:#08304a">Username: <strong>${acc.username}</strong></div><div style="font-size:13px;color:#08304a;margin-top:6px">Password: <strong>${acc.password}</strong></div><div style="font-size:12px;color:#485b6b;margin-top:6px">Expires: ${acc.expires}</div>`; el.appendChild(box); });
-    el.appendChild(meta); el.appendChild(btn); panel.appendChild(el);
+
+  validUsers.forEach(acc => {
+    const el = document.createElement('div');
+    el.className = 'acct';
+    const expiry = new Date(acc.expires);
+    const msLeft = expiry - Date.now();
+    const human = msLeft > 0 ? Math.floor(msLeft / (1000 * 60 * 60)) + ' hours left' : 'expired';
+    const meta = document.createElement('div');
+    meta.className = 'meta';
+    meta.innerHTML = `<strong>${acc.username}</strong> <div class="small">${human}</div>`;
+    const btn = document.createElement('button');
+    btn.className = 'revealBtn';
+    btn.textContent = 'View';
+    btn.addEventListener('click', () => {
+      const existing = el.querySelector('.revealBox');
+      if (existing) { existing.remove(); return; }
+      const box = document.createElement('div');
+      box.className = 'revealBox';
+      box.style.marginTop = '8px';
+      box.style.padding = '8px';
+      box.style.background = '#fff';
+      box.style.border = '1px solid #dde9fb';
+      box.style.borderRadius = '6px';
+      box.innerHTML = `
+        <div style="font-size:13px;color:#08304a">Username: <strong>${acc.username}</strong></div>
+        <div style="font-size:13px;color:#08304a;margin-top:6px">Password: <strong>${acc.password}</strong></div>
+        <div style="font-size:12px;color:#485b6b;margin-top:6px">Expires: ${acc.expires}</div>`;
+      el.appendChild(box);
+    });
+    el.appendChild(meta);
+    el.appendChild(btn);
+    panel.appendChild(el);
   });
 }
 </script>
