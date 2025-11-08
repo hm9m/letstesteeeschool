@@ -31,6 +31,21 @@ img.logo{height:50px;vertical-align:middle;margin-right:10px}
 .acct .meta{font-size:14px;color:#08304a}
 .revealBtn{background:#002F6C;color:#FFC726;border:none;padding:6px 8px;border-radius:6px;cursor:pointer}
 .small{font-size:13px;color:#485b6b}
+
+/* Role badges */
+.badge {
+  display:inline-block;
+  padding:2px 6px;
+  font-size:11px;
+  font-weight:bold;
+  border-radius:4px;
+  margin-left:6px;
+  color:#fff;
+}
+.badge.owner {background:#d6336c;}
+.badge.admin {background:#0052cc;}
+.badge.contributor {background:#22863a;}
+.badge.forever {background:#ffb800;color:#000;}
 </style>
 </head>
 <body>
@@ -93,10 +108,11 @@ img.logo{height:50px;vertical-align:middle;margin-right:10px}
 <script>
 /* ----- CONFIG ----- */
 const validUsers = [
-  {username:"admin",password:"letmein",expires:"never",isAdmin:true},
-  {username:"staff1",password:"bulldog2025",expires:"2025-01-01T00:00:00Z",isAdmin:false},
-  {username:"teacher",password:"opensesame",expires:"2025-11-15T23:59:59Z",isAdmin:false},
-  {username:"tech",password:"foreverbullis",expires:"never",isAdmin:false}
+  {username:"owner",password:"rootaccess",expires:"never",isAdmin:true,role:"owner"},
+  {username:"admin",password:"letmein",expires:"never",isAdmin:true,role:"admin"},
+  {username:"teacher",password:"opensesame",expires:"2025-11-15T23:59:59Z",isAdmin:false,role:"contributor"},
+  {username:"staff1",password:"bulldog2025",expires:"2025-01-01T00:00:00Z",isAdmin:false,role:"contributor"},
+  {username:"tech",password:"foreverbullis",expires:"never",isAdmin:false,role:"admin"}
 ];
 
 const BANS = [
@@ -127,7 +143,7 @@ document.getElementById('hotspot').addEventListener('click', () => {
     <input id="loginPass" type="password" placeholder="Password" autocomplete="current-password" />
     <button id="loginBtn">→</button>
     <div id="errorText"></div>
-    <div class="small" style="margin-top:8px">Did you know admins have special accounts? (V.1.3)</div>
+    <div class="small" style="margin-top:8px">Did you know admins have special accounts? (V.1.4)</div>
   `;
   pw.style.display = 'block';
   document.getElementById('loginUser').focus();
@@ -173,11 +189,9 @@ async function onLoginClick() {
   const ip = await fetchIP();
   const now = new Date();
 
-  // Check bans
   const banEntry = BANS.find(b => (b.username && b.username === user) || (b.ip && b.ip === ip));
   if (banEntry) { navigateOrReplace('ban.html', banFallbackHtml(ip, banEntry.reason)); return; }
 
-  // Check account
   const account = validUsers.find(a => a.username === user);
   if (!account || account.password !== pass) {
     errEl.textContent = "Invalid username or password.";
@@ -185,19 +199,17 @@ async function onLoginClick() {
     return;
   }
 
-  // Check expiration (skip if "never")
   if (account.expires !== "never" && new Date(account.expires) <= now) {
     navigateOrReplace('expired.html', expiredFallbackHtml(ip));
     return;
   }
 
-  // Success
   document.getElementById('passwordBox').style.display = 'none';
   if (account.isAdmin) showAdminPanel();
   else document.getElementById('embedContainer').style.display = 'block';
 }
 
-/* Admin panel */
+/* Admin panel with roles and badges */
 function showAdminPanel() {
   const panel = document.getElementById('adminPanel');
   panel.innerHTML = '';
@@ -218,9 +230,17 @@ function showAdminPanel() {
       const msLeft = expiry - Date.now();
       human = msLeft > 0 ? Math.floor(msLeft / (1000 * 60 * 60)) + ' hours left' : 'expired';
     }
+
     const meta = document.createElement('div');
     meta.className = 'meta';
-    meta.innerHTML = `<strong>${acc.username}</strong> <div class="small">${human}</div>`;
+
+    // Role badge color
+    let badgeClass = acc.role ? acc.role.toLowerCase() : '';
+    let badgeHTML = acc.role ? `<span class="badge ${badgeClass}">${acc.role}</span>` : '';
+    if (acc.expires === "never") badgeHTML += ` <span class="badge forever">∞</span>`;
+
+    meta.innerHTML = `<strong>${acc.username}</strong> ${badgeHTML} <div class="small">${human}</div>`;
+
     const btn = document.createElement('button');
     btn.className = 'revealBtn';
     btn.textContent = 'View';
@@ -237,9 +257,11 @@ function showAdminPanel() {
       box.innerHTML = `
         <div style="font-size:13px;color:#08304a">Username: <strong>${acc.username}</strong></div>
         <div style="font-size:13px;color:#08304a;margin-top:6px">Password: <strong>${acc.password}</strong></div>
-        <div style="font-size:12px;color:#485b6b;margin-top:6px">Expires: ${acc.expires}</div>`;
+        <div style="font-size:12px;color:#485b6b;margin-top:6px">Expires: ${acc.expires}</div>
+        <div style="font-size:12px;color:#485b6b;margin-top:6px">Role: ${acc.role || "none"}</div>`;
       el.appendChild(box);
     });
+
     el.appendChild(meta);
     el.appendChild(btn);
     panel.appendChild(el);
