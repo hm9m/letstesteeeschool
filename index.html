@@ -14,40 +14,25 @@ section{background:#fff;padding:15px;margin-bottom:15px;border-radius:8px;box-sh
 h2{color:#002F6C}
 footer{background:#002F6C;color:#FFC726;text-align:center;padding:15px}
 img.logo{height:50px;vertical-align:middle;margin-right:10px}
-
-/* Hotspot & login box */
 #hotspot{position:fixed;bottom:10px;right:10px;width:40px;height:40px;background:transparent;cursor:pointer;z-index:1000}
 #passwordBox{position:fixed;bottom:60px;right:10px;display:none;z-index:1001;background:#fff;border:2px solid #002F6C;border-radius:8px;padding:10px;box-shadow:0 2px 6px rgba(0,0,0,.15);width:300px}
 #passwordBox input{display:block;margin-bottom:6px;padding:8px;font-size:14px;border:1px solid #ccc;border-radius:4px;width:100%;box-sizing:border-box}
 #passwordBox button{padding:8px;font-size:14px;background:#002F6C;color:#FFC726;border:none;border-radius:4px;cursor:pointer;width:100%}
 #errorText{color:#c0392b;font-size:13px;margin-top:6px;display:none}
-
-/* Embed container */
 #embedContainer{display:none;margin-top:20px;width:100%;height:500px}
-
-/* Admin panel */
 #adminPanel{display:none;padding:12px;background:#fff;border-radius:8px;border:2px solid #002F6C;box-shadow:0 2px 6px rgba(0,0,0,.12);margin-top:20px}
 .acct{display:flex;align-items:center;justify-content:space-between;border:1px solid #e6eef9;padding:8px;border-radius:6px;margin-bottom:8px;background:#f8fbff}
 .acct .meta{font-size:14px;color:#08304a}
 .revealBtn{background:#002F6C;color:#FFC726;border:none;padding:6px 8px;border-radius:6px;cursor:pointer}
 .small{font-size:13px;color:#485b6b}
-
-/* Role badges */
-.badge {
-  display:inline-block;
-  padding:2px 6px;
-  font-size:11px;
-  font-weight:bold;
-  border-radius:4px;
-  margin-left:6px;
-  color:#fff;
-}
-.badge.owner {background:#d6336c;}
-.badge.admin {background:#0052cc;}
-.badge.contributor {background:#22863a;}
-.badge.forever {background:#ffb800;color:#000;}
-.badge.supporter {background:#FFFF00;color:#394361}
-.badge.🏦 {background:#FFFF00;color:#394361}
+.badge{display:inline-block;padding:2px 6px;font-size:11px;font-weight:bold;border-radius:4px;margin-left:6px;color:#fff}
+.badge.owner{background:#d6336c}
+.badge.admin{background:#0052cc}
+.badge.contributor{background:#22863a}
+.badge.forever{background:#ffb800;color:#000}
+.badge.supporter{background:#FFFF00;color:#394361}
+.badge.🏦{background:#FFFF00;color:#394361}
+#announcementsSection{display:none;}
 </style>
 </head>
 <body>
@@ -67,12 +52,12 @@ img.logo{height:50px;vertical-align:middle;margin-right:10px}
 </nav>
 
 <main>
-  <section>
+
+  <!-- Hidden Announcements (only visible after login) -->
+  <section id="announcementsSection">
     <h2>Announcements</h2>
-    <ul>
-      <li>Welcome back Week begins Monday at 8 a.m.</li>
-      <li>Bulldog Spirit Day next Friday – wear blue & gold!</li>
-      <li>Library opens extended hours during finals week.</li>
+    <ul id="announcementsList">
+      <li>Loading announcements...</li>
     </ul>
   </section>
 
@@ -95,12 +80,10 @@ img.logo{height:50px;vertical-align:middle;margin-right:10px}
   <div id="embedContainer">
     <iframe src="https://myappsclasslink.pegle.com" width="100%" height="100%" style="border:0"></iframe>
   </div>
+
 </main>
 
-<!-- Secret hotspot button -->
 <div id="hotspot" title="secret"></div>
-
-<!-- Hidden login box -->
 <div id="passwordBox"></div>
 
 <footer>
@@ -108,179 +91,136 @@ img.logo{height:50px;vertical-align:middle;margin-right:10px}
 </footer>
 
 <script>
-/* ----- CONFIG ----- */
-const validUsers = [
-  {username:"Owner",password:"rootaccess",expires:"never",isAdmin:true,role:"owner",note:"Primary site owner."},
-  {username:"Admin",password:"letmein",expires:"never",isAdmin:true,role:"admin",note:"Handles faculty and staff management."},
-  {username:"Teacher",password:"opensesame",expires:"2025-11-15T23:59:59Z",isAdmin:false,role:"contributor",note:"Upper School physics."},
-  {username:"Staff1",password:"bulldog2025",expires:"2025-01-01T00:00:00Z",isAdmin:false,role:"contributor",note:"Office staff account."},
-  {username:"test",password:"testtesttest",expires:"2025-01-01T00:00:00Z",isAdmin:false,role:"🏦",note:"Test sandbox user."}
+const validUsers=[
+  {username:"Owner",password:"rootaccess",expires:"never",isAdmin:true,role:"owner",notes:"Main site controller."},
+  {username:"Admin",password:"letmein",expires:"never",isAdmin:true,role:"admin",notes:"Handles announcements and updates."},
+  {username:"Teacher",password:"opensesame",expires:"2025-11-15T23:59:59Z",isAdmin:false,role:"contributor",notes:"General contributor."},
+  {username:"Staff1",password:"bulldog2025",expires:"2025-01-01T00:00:00Z",isAdmin:false,role:"contributor",notes:"Test account."},
+  {username:"test",password:"testtesttest",expires:"2025-01-01T00:00:00Z",isAdmin:false,role:"🏦",notes:"Experimental."}
 ];
 
-const BANS = [
+const BANS=[
   {username:"baduser",reason:"Suspicious activity"},
   {username:"baduser2",reason:"Suspicious activity2"},
   {ip:"123.45.67.89",reason:"Blocked IP due to abuse"}
 ];
 
-/* Fetch public IP */
-let clientIP = null;
-async function fetchIP() {
-  if (clientIP) return clientIP;
-  try {
-    const r = await fetch("https://api.ipify.org?format=json", { cache: "no-store" });
-    const j = await r.json();
-    clientIP = j.ip || "unknown";
-  } catch (e) {
-    clientIP = "unknown";
-  }
+let clientIP=null;
+async function fetchIP(){
+  if(clientIP) return clientIP;
+  try{
+    const r=await fetch("https://api.ipify.org?format=json",{cache:"no-store"});
+    const j=await r.json();
+    clientIP=j.ip||"unknown";
+  }catch(e){clientIP="unknown";}
   return clientIP;
 }
 
-/* Hotspot click → show login box */
-document.getElementById('hotspot').addEventListener('click', () => {
-  const pw = document.getElementById('passwordBox');
-  pw.innerHTML = `
+/* ----- Announcements Loader ----- */
+async function loadAnnouncements(){
+  const url="https://docs.google.com/spreadsheets/d/e/2PACX-1vQ_-w-DAPezbAzU8xZOylF9OnrPxen42KrzJ6MayaRzHxCcj8i6TjVDGfkqidkb2ouMxnit-ocEay61/pub?output=csv";
+  const list=document.getElementById("announcementsList");
+  try{
+    const res=await fetch(url);
+    const text=await res.text();
+    const rows=text.trim().split("\n").slice(1);
+    list.innerHTML="";
+    rows.forEach(row=>{
+      const cols=row.split(",");
+      if(cols[0] && cols[1]){
+        const title=cols[0].trim();
+        const msg=cols[1].trim();
+        const li=document.createElement("li");
+        li.innerHTML=`<strong>${title}</strong>: ${msg}`;
+        list.appendChild(li);
+      }
+    });
+  }catch(e){
+    list.innerHTML="<li>Unable to load announcements. Check Sheet permissions.</li>";
+  }
+}
+setInterval(()=>{if(document.getElementById("announcementsSection").style.display==="block"){loadAnnouncements();}},60000);
+function showAnnouncements(){document.getElementById("announcementsSection").style.display="block";loadAnnouncements();}
+
+/* ----- Login Hotspot ----- */
+document.getElementById('hotspot').addEventListener('click',()=>{
+  const pw=document.getElementById('passwordBox');
+  pw.innerHTML=`
     <input id="loginUser" type="text" placeholder="Username" autocomplete="username" />
     <input id="loginPass" type="password" placeholder="Password" autocomplete="current-password" />
     <button id="loginBtn">→</button>
     <div id="errorText"></div>
-    <div class="small" style="margin-top:8px">Did you know admins have special accounts? (V.1.5)</div>
-  `;
-  pw.style.display = 'block';
+    <div class="small" style="margin-top:8px">Did you know admins have special accounts? (V.1.5)</div>`;
+  pw.style.display='block';
   document.getElementById('loginUser').focus();
-  document.getElementById('loginBtn').addEventListener('click', onLoginClick);
+  document.getElementById('loginBtn').addEventListener('click',onLoginClick);
 });
 
-/* Navigate or replace (for iframe-blocked environments) */
-function navigateOrReplace(url, fallbackHtml) {
-  try { if (top && top.location) { top.location.href = url; return; } } catch (e) {}
-  document.documentElement.innerHTML = fallbackHtml;
-  try { window.stop(); } catch (e) {}
+function navigateOrReplace(url,fallbackHtml){
+  try{if(top&&top.location){top.location.href=url;return;}}catch(e){}
+  document.documentElement.innerHTML=fallbackHtml;
+  try{window.stop();}catch(e){}
+}
+function banFallbackHtml(ip,reason){return `<div style="font-family:Arial;display:flex;min-height:100vh;align-items:center;justify-content:center;background:#0d1220;color:#fff"><div style="max-width:720px;background:#091028;padding:28px;border-radius:10px;text-align:center"><h1 style="color:#ffb86b">Access Restricted</h1><p>${reason}</p><p><strong>Reference IP:</strong> ${ip}</p></div></div>`;}
+function expiredFallbackHtml(ip){return `<div style="font-family:Arial;display:flex;min-height:100vh;align-items:center;justify-content:center;background:#f4f7fb"><div style="max-width:720px;background:#fff;padding:28px;border-radius:10px;text-align:center"><h1 style="color:#e69100">Account Expired</h1><p>Your account license has expired.</p><p><strong>Reference IP:</strong> ${ip}</p></div></div>`;}
+
+async function onLoginClick(){
+  const user=document.getElementById('loginUser').value.trim();
+  const pass=document.getElementById('loginPass').value.trim();
+  const errEl=document.getElementById('errorText');
+  errEl.style.display='none';
+  const ip=await fetchIP();
+  const now=new Date();
+  const banEntry=BANS.find(b=>(b.username&&b.username===user)||(b.ip&&b.ip===ip));
+  if(banEntry){navigateOrReplace('ban.html',banFallbackHtml(ip,banEntry.reason));return;}
+  const account=validUsers.find(a=>a.username===user);
+  if(!account||account.password!==pass){errEl.textContent="Invalid username or password.";errEl.style.display='block';return;}
+  if(account.expires!=="never"&&new Date(account.expires)<=now){navigateOrReplace('expired.html',expiredFallbackHtml(ip));return;}
+  document.getElementById('passwordBox').style.display='none';
+  if(account.isAdmin) showAdminPanel();
+  showAnnouncements();
+  document.getElementById('embedContainer').style.display='block';
 }
 
-/* Ban / Expired fallback */
-function banFallbackHtml(ip, reason) {
-  return `<div style="font-family:Arial,Helvetica,sans-serif;display:flex;min-height:100vh;align-items:center;justify-content:center;background:#0d1220;color:#fff;margin:0;padding:32px">
-    <div style="max-width:720px;background:#091028;padding:28px;border-radius:10px;box-shadow:0 8px 30px rgba(0,0,0,.6);text-align:center">
-      <h1 style="color:#ffb86b;margin:0 0 8px">Access Restricted</h1>
-      <p style="color:#dbe7ff;margin:0 0 12px">${reason}</p>
-      <p style="color:#dbe7ff;margin:0 0 12px"><strong>Reference IP:</strong> ${ip}</p>
-    </div>
-  </div>`;
-}
-function expiredFallbackHtml(ip) {
-  return `<div style="font-family:Arial,Helvetica,sans-serif;display:flex;min-height:100vh;align-items:center;justify-content:center;background:#f4f7fb;margin:0;padding:32px">
-    <div style="max-width:720px;background:#fff;padding:28px;border-radius:10px;box-shadow:0 8px 30px rgba(0,0,0,.06);text-align:center">
-      <h1 style="color:#e69100;margin:0 0 8px">Account Expired</h1>
-      <p style="color:#333;margin:0 0 12px">Your account license has expired. Please contact administration.</p>
-      <p style="color:#333;margin:0 0 12px"><strong>Reference IP:</strong> ${ip}</p>
-    </div>
-  </div>`;
-}
-
-/* Login handler */
-async function onLoginClick() {
-  const user = document.getElementById('loginUser').value.trim();
-  const pass = document.getElementById('loginPass').value.trim();
-  const errEl = document.getElementById('errorText');
-  errEl.style.display = 'none';
-  const ip = await fetchIP();
-  const now = new Date();
-
-  const banEntry = BANS.find(b => (b.username && b.username === user) || (b.ip && b.ip === ip));
-  if (banEntry) { navigateOrReplace('ban.html', banFallbackHtml(ip, banEntry.reason)); return; }
-
-  const account = validUsers.find(a => a.username === user);
-  if (!account || account.password !== pass) {
-    errEl.textContent = "Invalid username or password.";
-    errEl.style.display = 'block';
-    return;
-  }
-
-  if (account.expires !== "never" && new Date(account.expires) <= now) {
-    navigateOrReplace('expired.html', expiredFallbackHtml(ip));
-    return;
-  }
-
-  document.getElementById('passwordBox').style.display = 'none';
-  if (account.isAdmin) showAdminPanel();
-  else document.getElementById('embedContainer').style.display = 'block';
-}
-
-/* Admin panel with GitHub stats + notes */
-async function showAdminPanel() {
-  const panel = document.getElementById('adminPanel');
-  panel.innerHTML = '';
-  panel.style.display = 'block';
-  panel.setAttribute('aria-hidden', 'false');
-  const title = document.createElement('div');
-  title.innerHTML = '<h3 style="margin:0 0 8px;color:#002F6C">Admin Console — Accounts Database</h3>';
+function showAdminPanel(){
+  const panel=document.getElementById('adminPanel');
+  panel.innerHTML='';
+  panel.style.display='block';
+  panel.setAttribute('aria-hidden','false');
+  const title=document.createElement('div');
+  title.innerHTML='<h3 style="margin:0 0 8px;color:#002F6C">Admin Console — Accounts Database</h3>';
   panel.appendChild(title);
-
-  // GitHub stats
-  const statsBox = document.createElement('div');
-  statsBox.className = 'acct';
-  statsBox.innerHTML = `<div class="meta"><strong>Loading GitHub stats...</strong></div>`;
-  panel.appendChild(statsBox);
-
-  try {
-    const r = await fetch("https://api.github.com/repos/hm9m/letstesteeeschool");
-    const j = await r.json();
-    statsBox.innerHTML = `
-      <div class="meta">
-        <strong>📊 GitHub Repo Stats</strong><br>
-        ⭐ Stars: ${j.stargazers_count || 0} • 🍴 Forks: ${j.forks_count || 0} • 🧩 Issues: ${j.open_issues_count || 0} • 👁️ Watchers: ${j.subscribers_count || 0}
-        <div class="small">Updated: ${new Date(j.updated_at).toLocaleString()}</div>
-        <div class="small"><a href="${j.html_url}" target="_blank">View Repository →</a></div>
-      </div>
-    `;
-  } catch (e) {
-    statsBox.innerHTML = `<div class="meta" style="color:#c00">⚠️ Failed to load GitHub stats.</div>`;
-  }
-
-  // User list with notes
-  validUsers.forEach(acc => {
-    const el = document.createElement('div');
-    el.className = 'acct';
-    let human;
-    if (acc.expires === "never") human = "Never expires";
-    else {
-      const expiry = new Date(acc.expires);
-      const msLeft = expiry - Date.now();
-      human = msLeft > 0 ? Math.floor(msLeft / (1000 * 60 * 60)) + ' hours left' : 'expired';
-    }
-
-    const meta = document.createElement('div');
-    meta.className = 'meta';
-    const badgeClass = acc.role ? acc.role.toLowerCase() : '';
-    const badgeHTML = acc.role ? `<span class="badge ${badgeClass}">${acc.role}</span>` : '';
-
-    meta.innerHTML = `<strong>${acc.username}</strong> ${badgeHTML}
-      <div class="small">${human}</div>
-      <div class="small" style="margin-top:6px;color:#08304a"><em>${acc.note || "No notes yet."}</em></div>`;
-
-    const btn = document.createElement('button');
-    btn.className = 'revealBtn';
-    btn.textContent = 'View';
-    btn.addEventListener('click', () => {
-      const existing = el.querySelector('.revealBox');
-      if (existing) { existing.remove(); return; }
-      const box = document.createElement('div');
-      box.className = 'revealBox';
-      box.style.marginTop = '8px';
-      box.style.padding = '8px';
-      box.style.background = '#fff';
-      box.style.border = '1px solid #dde9fb';
-      box.style.borderRadius = '6px';
-      box.innerHTML = `
-        <div style="font-size:13px;color:#08304a">Username: <strong>${acc.username}</strong></div>
-        <div style="font-size:13px;color:#08304a;margin-top:6px">Password: <strong>${acc.password}</strong></div>
-        <div style="font-size:12px;color:#485b6b;margin-top:6px">Expires: ${acc.expires}</div>
-        <div style="font-size:12px;color:#485b6b;margin-top:6px">Role: ${acc.role || "none"}</div>`;
+  validUsers.forEach(acc=>{
+    const el=document.createElement('div');
+    el.className='acct';
+    let human=acc.expires==="never"?"Never expires":(new Date(acc.expires)-Date.now()>0?Math.floor((new Date(acc.expires)-Date.now())/(1000*60*60))+" hours left":"expired");
+    const meta=document.createElement('div');
+    meta.className='meta';
+    let badgeClass=acc.role?acc.role.toLowerCase():'';
+    let badgeHTML=acc.role?`<span class="badge ${badgeClass}">${acc.role}</span>`:'';
+    if(acc.expires==="never") badgeHTML+=` <span class="badge forever">∞</span>`;
+    meta.innerHTML=`<strong>${acc.username}</strong> ${badgeHTML}<div class="small">${human}</div>`;
+    const btn=document.createElement('button');
+    btn.className='revealBtn';
+    btn.textContent='View';
+    btn.addEventListener('click',()=>{
+      const existing=el.querySelector('.revealBox');
+      if(existing){existing.remove();return;}
+      const box=document.createElement('div');
+      box.className='revealBox';
+      box.style.marginTop='8px';
+      box.style.padding='8px';
+      box.style.background='#fff';
+      box.style.border='1px solid #dde9fb';
+      box.style.borderRadius='6px';
+      box.innerHTML=`
+        <div style="font-size:13px">Username: <strong>${acc.username}</strong></div>
+        <div style="font-size:13px;margin-top:6px">Password: <strong>${acc.password}</strong></div>
+        <div style="font-size:12px;margin-top:6px">Expires: ${acc.expires}</div>
+        <div style="font-size:12px;margin-top:6px">Role: ${acc.role||"none"}</div>
+        <div style="font-size:12px;margin-top:6px">Notes: ${acc.notes||"None"}</div>`;
       el.appendChild(box);
     });
-
     el.appendChild(meta);
     el.appendChild(btn);
     panel.appendChild(el);
